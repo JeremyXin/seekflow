@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "seekflow"
+version = "0.1.0"
+description = "LLM-based search engine CLI with local Markdown knowledge base"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "typer>=0.16",
+  "rich>=14.0",
+  "prompt-toolkit>=3.0",
+  "httpx>=0.27",
+  "tomlkit>=0.13",
+  "ddgs>=9.0",
+  "trafilatura>=1.12",
+  "readability-lxml>=0.8.4",
+  "beautifulsoup4>=4.12",
+  "PyYAML>=6.0",
+  "python-slugify>=8.0",
+  "openai>=1.86.0",
+]
+
+[project.scripts]
+seekflow = "seekflow.cli:app"
+
+[project.optional-dependencies]
+browser = [
+  "playwright>=1.52",
+]

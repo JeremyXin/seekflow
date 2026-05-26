@@ -1,0 +1,12 @@
+__pycache__/
+.pytest_cache/
+.venv/
+dist/
+build/
+.seekflow/
+.seekflow-test/
+.sisyphus/
+*.pyc
+*.pyo
+*.swp
+.DS_Store
