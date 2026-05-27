@@ -4,7 +4,13 @@ import typer
 
 from seekflow import __version__
 from seekflow.config import ensure_config_exists, load_config
-from seekflow.output.formatter import show_error, show_saved_path, show_sources
+from seekflow.output.formatter import (
+    SessionMessage,
+    build_error_message,
+    build_saved_message,
+    build_sources_message,
+    render_app_shell,
+)
 from seekflow.pipeline import SearchPipeline
 from seekflow.repl.commands import handle_command
 from seekflow.repl.session import build_session, repl_loop
@@ -35,40 +41,57 @@ def init() -> None:
 async def run_repl(config) -> None:
     pipeline = SearchPipeline()
     session = build_session(config.knowledge_base.kb_dir.parent / "history")
+    messages: list[SessionMessage] = []
+
+    def redraw() -> None:
+        render_app_shell(config, messages)
 
     async def emit(text: str) -> None:
-        typer.echo(text)
+        messages.append(SessionMessage(role="system", title="System", body=text))
+        redraw()
 
     async def command_handler(text: str) -> None:
+        messages.append(SessionMessage(role="user", title="You", body=text))
+        redraw()
         await handle_command(text, config, emit)
 
     async def search_handler(text: str) -> None:
+        messages.append(SessionMessage(role="user", title="You", body=text))
+        redraw()
+
         if not config.llm.api_key:
-            show_error(
-                "LLM API key is not configured.",
-                "Set SEEKFLOW_LLM_API_KEY or edit ~/.seekflow/config.toml before searching.",
+            messages.append(
+                build_error_message(
+                    "LLM API key is not configured.",
+                    "Set SEEKFLOW_LLM_API_KEY or edit ~/.seekflow/config.toml before searching.",
+                )
             )
+            redraw()
             return
 
-        chunks: list[str] = []
-
-        def on_sources(results) -> None:
-            show_sources(results)
+        assistant_message: SessionMessage | None = None
 
         def on_chunk(chunk: str) -> None:
-            chunks.append(chunk)
-            typer.echo(chunk, nl=False)
+            nonlocal assistant_message
+            if assistant_message is None:
+                assistant_message = SessionMessage(role="assistant", title="SeekFlow", body="")
+                messages.append(assistant_message)
+            assistant_message.body += chunk
+            redraw()
 
         try:
-            entry = await pipeline.run(text, config, on_chunk=on_chunk, on_sources=on_sources)
+            entry = await pipeline.run(text, config, on_chunk=on_chunk, on_sources=None)
         except Exception as exc:
-            typer.echo()
-            show_error(str(exc))
+            messages.append(build_error_message(str(exc)))
+            redraw()
             return
 
-        if chunks:
-            typer.echo()
+        if assistant_message is None and entry.answer:
+            messages.append(SessionMessage(role="assistant", title="SeekFlow", body=entry.answer))
+        messages.append(build_sources_message(entry.sources))
         if entry.file_path:
-            show_saved_path(entry.file_path)
+            messages.append(build_saved_message(entry.file_path))
+        redraw()
 
+    redraw()
     await repl_loop(config, command_handler, search_handler, session)

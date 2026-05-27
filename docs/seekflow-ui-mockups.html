@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SeekFlow UI Mockups</title>
+  <style>
+    :root {
+      --bg: #f3efe7;
+      --paper: #fffdf9;
+      --ink: #1f1c18;
+      --muted: #74685b;
+      --line: #d9cdbd;
+      --accent: #d46a22;
+      --accent-2: #1d5c63;
+      --shadow: 0 20px 60px rgba(56, 37, 18, 0.08);
+      --radius: 22px;
+      --mono: "SFMono-Regular", "JetBrains Mono", "Menlo", monospace;
+      --sans: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at top left, rgba(212, 106, 34, 0.12), transparent 28%),
+        radial-gradient(circle at top right, rgba(29, 92, 99, 0.12), transparent 32%),
+        linear-gradient(180deg, #f7f2ea 0%, #efe8dc 100%);
+      color: var(--ink);
+      font-family: var(--sans);
+    }
+
+    .page {
+      width: min(1400px, calc(100vw - 48px));
+      margin: 0 auto;
+      padding: 40px 0 72px;
+    }
+
+    .hero {
+      margin-bottom: 28px;
+    }
+
+    .eyebrow {
+      font: 600 12px/1.2 var(--mono);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--accent-2);
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(36px, 5vw, 58px);
+      line-height: 0.96;
+      letter-spacing: -0.03em;
+    }
+
+    .hero p {
+      margin: 0;
+      color: var(--muted);
+      max-width: 860px;
+      font-size: 18px;
+      line-height: 1.5;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 24px;
+    }
+
+    .card {
+      background: rgba(255, 253, 249, 0.82);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(126, 103, 78, 0.16);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .card h2 {
+      margin: 0 0 6px;
+      font-size: 24px;
+    }
+
+    .card .subtitle {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .terminal {
+      border-radius: 18px;
+      overflow: hidden;
+      background: #f9f7f2;
+      border: 1px solid #cec2b2;
+    }
+
+    .terminal-header {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding: 10px 14px;
+      background: linear-gradient(180deg, #ede6db 0%, #dfd2bf 100%);
+      border-bottom: 1px solid #d3c6b5;
+      font: 600 12px/1 var(--mono);
+      color: #6d6256;
+    }
+
+    .dots {
+      display: flex;
+      gap: 6px;
+      margin-right: 8px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: #c6b29b;
+    }
+
+    .terminal-body {
+      padding: 14px;
+    }
+
+    .panel {
+      border-radius: 16px;
+      border: 1px solid #d8cbba;
+      background: #fffcf8;
+      overflow: hidden;
+    }
+
+    .panel.fixed {
+      min-height: 290px;
+    }
+
+    .panel-scroll {
+      min-height: 170px;
+      max-height: 170px;
+      border-top: 1px solid #e8dece;
+      border-bottom: 1px solid #e8dece;
+      background: linear-gradient(180deg, #fffdf9 0%, #fcf7ef 100%);
+      padding: 12px 16px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .panel-input {
+      padding: 12px 14px;
+      background: #fbf6ee;
+    }
+
+    .hintline {
+      border-top: 1px solid #e4d6c5;
+      border-bottom: 1px solid #e4d6c5;
+      padding: 8px 14px;
+      color: #8b7c6d;
+      font: 500 12px/1.3 var(--mono);
+      background: #fffaf2;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 14px;
+      padding: 14px;
+      background: linear-gradient(180deg, #fffdf9 0%, #fcf7ef 100%);
+    }
+
+    .row.alt {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .block {
+      border: 1px solid #e7daca;
+      border-radius: 14px;
+      padding: 14px;
+      background: rgba(255, 253, 248, 0.92);
+    }
+
+    .titlebar {
+      font: 600 12px/1.2 var(--mono);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #836f59;
+      margin-bottom: 10px;
+    }
+
+    .logo {
+      font: 700 13px/1.1 var(--mono);
+      white-space: pre;
+      color: #2f241b;
+      min-height: 118px;
+      display: flex;
+      align-items: center;
+    }
+
+    .status-stack {
+      display: grid;
+      gap: 10px;
+    }
+
+    .pill {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: #f5ecdf;
+      border: 1px solid #e4d3bc;
+      font: 500 12px/1 var(--mono);
+      color: #6d5b49;
+    }
+
+    .msg {
+      border: 1px solid #eadccb;
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: #fffdfa;
+      color: #4d433a;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .msg.user {
+      background: #f4ede1;
+      border-color: #dfcfb8;
+    }
+
+    .inputbox {
+      border-radius: 13px;
+      border: 1px solid #dccfbe;
+      padding: 12px 14px;
+      background: #fffdfa;
+      color: #6e6054;
+      font: 500 14px/1.3 var(--mono);
+    }
+
+    .footer-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 10px;
+      color: #918272;
+      font: 500 11px/1.2 var(--mono);
+    }
+
+    .console-dark {
+      background: #111318;
+      border-color: #232733;
+      color: #eff3f8;
+    }
+
+    .console-dark .terminal-header {
+      background: linear-gradient(180deg, #1b2028 0%, #141821 100%);
+      border-bottom-color: #262d38;
+      color: #a4b2c8;
+    }
+
+    .console-dark .panel,
+    .console-dark .block,
+    .console-dark .msg,
+    .console-dark .inputbox {
+      background: #171c24;
+      border-color: #2a3240;
+      color: #dce5f3;
+    }
+
+    .console-dark .row,
+    .console-dark .panel-scroll,
+    .console-dark .panel-input,
+    .console-dark .hintline {
+      background: #121720;
+      border-color: #262e3a;
+      color: #8fa0b8;
+    }
+
+    .console-dark .pill {
+      background: #18212d;
+      border-color: #304056;
+      color: #a8bfdc;
+    }
+
+    .console-dark .logo {
+      color: #dbe5f1;
+    }
+
+    .console-dark .msg.user {
+      background: #1c2532;
+      border-color: #344762;
+    }
+
+    .console-dark .titlebar,
+    .console-dark .footer-meta {
+      color: #8ea0b9;
+    }
+
+    .console-dark .accent {
+      color: #6ec8ff;
+    }
+
+    .console-neon {
+      background: #08140c;
+      border-color: #1f5b33;
+      color: #cbffda;
+      box-shadow: 0 0 0 1px rgba(67, 219, 108, 0.12), 0 18px 50px rgba(0, 0, 0, 0.34);
+    }
+
+    .console-neon .terminal-header {
+      background: linear-gradient(180deg, #0e2113 0%, #09160d 100%);
+      border-bottom-color: #1d4e2c;
+      color: #87d09d;
+    }
+
+    .console-neon .panel,
+    .console-neon .block,
+    .console-neon .msg,
+    .console-neon .inputbox {
+      background: #0b170e;
+      border-color: #1b4d2a;
+      color: #baf8c9;
+    }
+
+    .console-neon .row,
+    .console-neon .panel-scroll,
+    .console-neon .panel-input,
+    .console-neon .hintline {
+      background: #08110a;
+      border-color: #184424;
+      color: #7bcf90;
+    }
+
+    .console-neon .pill {
+      background: #102417;
+      border-color: #2d7240;
+      color: #a5f1b9;
+    }
+
+    .console-neon .logo,
+    .console-neon .titlebar,
+    .console-neon .footer-meta {
+      color: #8af0a3;
+    }
+
+    .tiny {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 14px;
+      line-height: 1.45;
+    }
+
+    @media (max-width: 1080px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .row,
+      .row.alt {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <div class="eyebrow">SeekFlow UI Exploration</div>
+      <h1>Fixed Header Terminal Concepts</h1>
+      <p>
+        These mockups explore the exact interaction direction you described: a persistent top status panel,
+        a scrolling conversation body, and a dedicated bottom input area. The six variants are grouped into
+        three style families so you can compare tone before we lock the implementation.
+      </p>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <h2>Style 1A · Claude-like / Balanced</h2>
+        <p class="subtitle">Quiet, information-dense, warm neutral palette. Fixed top card with a split welcome and status layout.</p>
+        <div class="terminal">
+          <div class="terminal-header">
+            <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+            SEEKFLOW · SESSION UI
+          </div>
+          <div class="terminal-body">
+            <div class="panel fixed">
+              <div class="row">
+                <div class="block">
+                  <div class="titlebar">Welcome</div>
+                  <div class="logo"> ____             _     _____ _               
+/ ___|  ___  ___| | __|  ___| | _____      __
+\___ \ / _ \/ _ \ |/ /| |_  | |/ _ \ \ /\ / /
+ ___) |  __/  __/   &lt; |  _| | | (_) \ V  V / 
+|____/ \___|\___|_|\_\|_|   |_|\___/ \_/\_/  </div>
+                  <div class="status-stack">
+                    <span class="pill">v0.1.0</span>
+                    <span class="pill">provider: duckduckgo</span>
+                    <span class="pill">model: gpt-4o-mini</span>
+                  </div>
+                </div>
+                <div class="block">
+                  <div class="titlebar">Session</div>
+                  <div class="msg">Tips: use <b>/provider list</b> to inspect engines and <b>/kb list</b> to browse saved notes.</div>
+                  <div class="msg">Recent activity: 3 saved entries this week</div>
+                  <div class="msg">Knowledge base: <code>~/.seekflow/knowledge</code></div>
+                </div>
+              </div>
+              <div class="hintline">Try: "compare asyncio vs threading in Python"</div>
+              <div class="panel-scroll">
+                <div class="msg user">What is Python GIL?</div>
+                <div class="msg">The GIL is a mutex in CPython that prevents multiple native threads from executing Python bytecode at the same time [1].</div>
+                <div class="msg">Saved to ~/ .seekflow / knowledge / 2026-05 / programming / what-is-python-gil.md</div>
+              </div>
+              <div class="panel-input">
+                <div class="inputbox">❯ Ask SeekFlow anything...</div>
+                <div class="footer-meta"><span>Enter to search</span><span>/help for commands</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="tiny">Good if you want the product to feel calm, polished, and tool-like without copying Claude too literally.</p>
+      </article>
+
+      <article class="card">
+        <h2>Style 1B · Claude-like / Dense</h2>
+        <p class="subtitle">Same family, but more dashboard-like: stronger use of metadata, more explicit “tips / current context / activity”.</p>
+        <div class="terminal">
+          <div class="terminal-header">
+            <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+            SEEKFLOW · RESEARCH MODE
+          </div>
+          <div class="terminal-body">
+            <div class="panel fixed">
+              <div class="row alt">
+                <div class="block">
+                  <div class="titlebar">Brand</div>
+                  <div class="logo"> ____             _     _____ _               
+/ ___|  ___  ___| | __|  ___| | _____      __
+\___ \ / _ \/ _ \ |/ /| |_  | |/ _ \ \ /\ / /
+ ___) |  __/  __/   &lt; |  _| | | (_) \ V  V / 
+|____/ \___|\___|_|\_\|_|   |_|\___/ \_/\_/  </div>
+                  <div class="msg">OpenAI-compatible synthesis with local Markdown memory.</div>
+                </div>
+                <div class="block">
+                  <div class="titlebar">Current Context</div>
+                  <div class="msg">provider: <b>duckduckgo</b></div>
+                  <div class="msg">model: <b>gpt-4o-mini</b></div>
+                  <div class="msg">vault mode: <b>off</b></div>
+                </div>
+              </div>
+              <div class="row alt" style="padding-top:0">
+                <div class="block">
+                  <div class="titlebar">Tips</div>
+                  <div class="msg">Use <b>/provider switch brave</b> after adding API credentials.</div>
+                  <div class="msg">Use <b>/kb search python</b> to revisit saved research.</div>
+                </div>
+                <div class="block">
+                  <div class="titlebar">Activity</div>
+                  <div class="msg">No recent failures</div>
+                  <div class="msg">Last saved entry: <b>Python GIL</b></div>
+                </div>
+              </div>
+              <div class="panel-scroll">
+                <div class="msg user">/provider status</div>
+                <div class="msg">Current provider: duckduckgo</div>
+                <div class="msg user">What is MCP in AI tooling?</div>
+              </div>
+              <div class="panel-input">
+                <div class="inputbox">❯ Try "explain MCP vs API wrappers"</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="tiny">Good if you want the product to feel operational and explicit, especially for power users.</p>
+      </article>
+
+      <article class="card">
+        <h2>Style 2A · Modern AI Console / Soft Dark</h2>
+        <p class="subtitle">More contemporary AI product feel: darker shell, stronger separation of header, message lane, and prompt lane.</p>
+        <div class="terminal console-dark">
+          <div class="terminal-header">
+            <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+            SEEKFLOW · CONSOLE
+          </div>
+          <div class="terminal-body">
+            <div class="panel fixed">
+              <div class="row">
+                <div class="block">
+                  <div class="titlebar">Identity</div>
+                  <div class="logo accent"> ____             _     _____ _               
+/ ___|  ___  ___| | __|  ___| | _____      __
+\___ \ / _ \/ _ \ |/ /| |_  | |/ _ \ \ /\ / /
+ ___) |  __/  __/   &lt; |  _| | | (_) \ V  V / 
+|____/ \___|\___|_|\_\|_|   |_|\___/ \_/\_/  </div>
+                </div>
+                <div class="block">
+                  <div class="titlebar">Live State</div>
+                  <div class="status-stack">
+                    <span class="pill">provider · duckduckgo</span>
+                    <span class="pill">model · gpt-4o-mini</span>
+                    <span class="pill">session · active</span>
+                  </div>
+                </div>
+              </div>
+              <div class="hintline">Fixed top pane stays visible. Only the conversation lane and input lane move.</div>
+              <div class="panel-scroll">
+                <div class="msg user">Summarize the differences between LangChain and DSPy.</div>
+                <div class="msg">LangChain is a workflow/tooling ecosystem; DSPy focuses more on declarative prompt program optimization [1][2].</div>
+                <div class="msg">Sources: docs, blog posts, framework references.</div>
+              </div>
+              <div class="panel-input">
+                <div class="inputbox">⌘ Ask a question or use /kb, /provider, /config</div>
+                <div class="footer-meta"><span>History enabled</span><span>Citations on</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="tiny">Good if you want SeekFlow to feel more like a modern AI workstation than a classic CLI tool.</p>
+      </article>
+
+      <article class="card">
+        <h2>Style 2B · Modern AI Console / Editorial</h2>
+        <p class="subtitle">Brighter accent usage, larger hierarchy, and clearer separation between system state and conversational work area.</p>
+        <div class="terminal console-dark">
+          <div class="terminal-header">
+            <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+            SEEKFLOW · KNOWLEDGE RUNNER
+          </div>
+          <div class="terminal-body">
+            <div class="panel fixed">
+              <div class="row alt">
+                <div class="block">
+                  <div class="titlebar">SeekFlow</div>
+                  <div class="logo"> ____             _     <span class="accent">_____ _</span>               
+/ ___|  ___  ___| | __<span class="accent">|  ___| |</span> _____      __
+\___ \ / _ \/ _ \ |/ /<span class="accent">| |_  | |</span>/ _ \ \ /\ / /
+ ___) |  __/  __/   &lt; <span class="accent">|  _| | |</span> (_) \ V  V / 
+|____/ \___|\___|_|\_\<span class="accent">|_|   |_|\___/</span> \_/\_/  </div>
+                </div>
+                <div class="block">
+                  <div class="titlebar">Runtime</div>
+                  <div class="msg">provider: <b>duckduckgo</b></div>
+                  <div class="msg">model: <b>gpt-4o-mini</b></div>
+                  <div class="msg">kb dir: <b>~/.seekflow/knowledge</b></div>
+                </div>
+              </div>
+              <div class="panel-scroll">
+                <div class="msg">Welcome back. Ask a question to search the web and save a local note.</div>
+                <div class="msg user">/kb list</div>
+                <div class="msg">Python GIL
+MCP vs API wrappers
+Asyncio vs threading</div>
+              </div>
+              <div class="panel-input">
+                <div class="inputbox">Type a research question...</div>
+                <div class="footer-meta"><span>Enter: search</span><span>Shift+Enter: multiline later</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="tiny">Good if you want a cleaner product marketing feel while still staying terminal-native.</p>
+      </article>
+
+      <article class="card">
+        <h2>Style 3A · Geek Terminal / Structured ASCII</h2>
+        <p class="subtitle">Leans into terminal identity: heavier monospaced presentation, stronger ASCII branding, still organized and readable.</p>
+        <div class="terminal console-neon">
+          <div class="terminal-header">
+            <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+            SEEKFLOW · ASCII CORE
+          </div>
+          <div class="terminal-body">
+            <div class="panel fixed">
+              <div class="row">
+                <div class="block">
+                  <div class="titlebar">Banner</div>
+                  <div class="logo"> ____             _     _____ _               
+/ ___|  ___  ___| | __|  ___| | _____      __
+\___ \ / _ \/ _ \ |/ /| |_  | |/ _ \ \ /\ / /
+ ___) |  __/  __/   &lt; |  _| | | (_) \ V  V / 
+|____/ \___|\___|_|\_\|_|   |_|\___/ \_/\_/  </div>
+                </div>
+                <div class="block">
+                  <div class="titlebar">Session State</div>
+                  <div class="msg">provider = duckduckgo</div>
+                  <div class="msg">model    = gpt-4o-mini</div>
+                  <div class="msg">billing  = external API</div>
+                </div>
+              </div>
+              <div class="hintline">Hint: use /provider switch and /kb search for fast navigation.</div>
+              <div class="panel-scroll">
+                <div class="msg user">What changed in Python 3.12?</div>
+                <div class="msg">Summary: performance, typing, and interpreter internals all received notable updates [1][2][3].</div>
+                <div class="msg">saved => 2026-05/programming/what-changed-in-python-3-12.md</div>
+              </div>
+              <div class="panel-input">
+                <div class="inputbox">&gt;_ ask, search, or issue a slash command</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="tiny">Good if you want SeekFlow to feel memorable and deeply terminal-native without becoming chaotic.</p>
+      </article>
+
+      <article class="card">
+        <h2>Style 3B · Geek Terminal / Retro Signal</h2>
+        <p class="subtitle">Most opinionated version. Stronger green-screen flavor, more playful branding, best if you want a distinct hacker-tool personality.</p>
+        <div class="terminal console-neon">
+          <div class="terminal-header">
+            <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+            SEEKFLOW · RETRO SIGNAL
+          </div>
+          <div class="terminal-body">
+            <div class="panel fixed">
+              <div class="row alt">
+                <div class="block">
+                  <div class="titlebar">ASCII Mark</div>
+                  <div class="logo"> ____             _     _____ _               
+/ ___|  ___  ___| | __|  ___| | _____      __
+\___ \ / _ \/ _ \ |/ /| |_  | |/ _ \ \ /\ / /
+ ___) |  __/  __/   &lt; |  _| | | (_) \ V  V / 
+|____/ \___|\___|_|\_\|_|   |_|\___/ \_/\_/  </div>
+                </div>
+                <div class="block">
+                  <div class="titlebar">Operator Panel</div>
+                  <div class="status-stack">
+                    <span class="pill">[provider] duckduckgo</span>
+                    <span class="pill">[model] gpt-4o-mini</span>
+                    <span class="pill">[kb] local markdown</span>
+                  </div>
+                </div>
+              </div>
+              <div class="panel-scroll">
+                <div class="msg">READY.</div>
+                <div class="msg">Recent command: /provider status</div>
+                <div class="msg">Recent note: Python GIL</div>
+                <div class="msg user">How does MCP differ from REST plugin wrappers?</div>
+              </div>
+              <div class="panel-input">
+                <div class="inputbox">[ SEEKFLOW ] waiting for input...</div>
+                <div class="footer-meta"><span>persistent header</span><span>scrolling dialog lane</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="tiny">Good if you want a strong visual signature and you are comfortable being less conservative than Claude Code.</p>
+      </article>
+    </section>
+  </div>
+</body>
+</html>
