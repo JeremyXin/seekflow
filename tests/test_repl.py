@@ -1,6 +1,7 @@
 import pytest
 
-from seekflow.repl.session import build_prompt_message, dispatch_input
+from seekflow.output.formatter import SessionMessage
+from seekflow.repl.session import SeekFlowTUI, build_input_hint_text, dispatch_input
 
 
 @pytest.mark.asyncio
@@ -31,8 +32,68 @@ async def test_dispatches_search_query() -> None:
     assert calls == [("search", "python gil")]
 
 
-def test_build_prompt_message_looks_like_chat_input() -> None:
-    prompt = build_prompt_message("Ask SeekFlow to research a topic...")
-    assert "Ask SeekFlow to research a topic..." in prompt
-    assert "╭" in prompt
-    assert "╰─❯ " in prompt
+def test_build_input_hint_text_contains_repl_guidance() -> None:
+    prompt = build_input_hint_text()
+    assert "? for shortcuts" in prompt
+
+
+def test_build_repl_view_returns_text_sections(app_config) -> None:
+    from seekflow.repl.session import build_repl_view
+
+    sections = build_repl_view(
+        app_config,
+        [SessionMessage(role="assistant", title="SeekFlow", body="hello")],
+        "draft input",
+    )
+
+    assert "SeekFlow" in sections["body"]
+    assert "hello" in sections["body"]
+    assert "draft input" in sections["input"]
+
+
+def test_body_area_does_not_force_full_height(app_config, tmp_path) -> None:
+    tui = SeekFlowTUI(
+        app_config,
+        tmp_path / "history",
+        [SessionMessage(role="assistant", title="SeekFlow", body="short reply")],
+        lambda text: None,
+        lambda text: None,
+    )
+
+    assert tui.body_area.window.dont_extend_height()
+
+
+def test_append_stream_chunk_builds_assistant_message() -> None:
+    from seekflow.repl.session import append_stream_chunk
+
+    messages: list[SessionMessage] = []
+
+    append_stream_chunk(messages, "Hello")
+    append_stream_chunk(messages, " world")
+
+    assert messages[-1].role == "assistant"
+    assert messages[-1].body == "Hello world"
+
+
+@pytest.mark.asyncio
+async def test_submit_exception_becomes_error_message_and_restores_input(app_config, tmp_path) -> None:
+    async def failing_command(text: str) -> None:
+        raise RuntimeError(f"boom: {text}")
+
+    async def unused_search(text: str) -> None:
+        raise AssertionError("search handler should not be called")
+
+    tui = SeekFlowTUI(
+        app_config,
+        tmp_path / "history",
+        [],
+        failing_command,
+        unused_search,
+    )
+    tui.input_area.buffer.text = "/help"
+
+    await tui._submit_current_input()
+
+    assert tui.input_area.text == "/help"
+    assert tui.messages[-1].role == "error"
+    assert "boom: /help" in tui.messages[-1].body

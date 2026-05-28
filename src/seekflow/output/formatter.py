@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
+import textwrap
 
 from rich import box
 from rich.columns import Columns
@@ -37,6 +38,98 @@ def _collect_recent_activity(kb_dir: Path) -> str:
         return "No recent activity"
     latest = entries[-1]
     return f"{len(entries)} saved entries · latest: {latest.stem}"
+
+
+def _clamp_text(text: str, width: int) -> str:
+    if width <= 0:
+        return ""
+    if len(text) <= width:
+        return text
+    if width <= 1:
+        return text[:width]
+    return text[: width - 1] + "…"
+
+
+def _wrap_lines(text: str, width: int) -> list[str]:
+    wrapped = textwrap.wrap(text, width=max(width, 12)) or [""]
+    return [_clamp_text(line, width) for line in wrapped]
+
+
+def _pad_center(text: str, width: int) -> str:
+    return _clamp_text(text, width).center(width)
+
+
+def _pad_left(text: str, width: int) -> str:
+    return _clamp_text(text, width).ljust(width)
+
+
+def build_header_text(config, width: int = 108) -> str:
+    inner_width = max(78, width - 2)
+    divider = 3
+    left_width = max(28, (inner_width - divider) // 2)
+    right_width = inner_width - divider - left_width
+
+    left_lines = [
+        _pad_center("Welcome back!", left_width),
+        _pad_center("seekflow", left_width),
+        "",
+        _pad_center(f"{config.llm.model} · {config.app.default_provider}", left_width),
+        _pad_center(str(config.knowledge_base.kb_dir), left_width),
+    ]
+    right_lines = [
+        *_wrap_lines("Tips for getting started", right_width),
+        *_wrap_lines("Run /help to inspect commands", right_width),
+        "─" * right_width,
+        *_wrap_lines("Recent activity", right_width),
+        *_wrap_lines(_collect_recent_activity(config.knowledge_base.kb_dir), right_width),
+    ]
+    rows = max(len(left_lines), len(right_lines))
+    padded_left = left_lines + [""] * (rows - len(left_lines))
+    padded_right = right_lines + [""] * (rows - len(right_lines))
+
+    title = f" SeekFlow v{__version__} "
+    top_fill = max(0, inner_width - len(title))
+    top = "╭" + "─" * 3 + title + "─" * max(0, top_fill - 3) + "╮"
+    middle = [
+        f"│{_pad_left(left, left_width)} │ {_pad_left(right, right_width)}│"
+        for left, right in zip(padded_left, padded_right, strict=False)
+    ]
+    bottom = "╰" + "─" * inner_width + "╯"
+    return "\n".join([top, *middle, bottom])
+
+
+def build_transcript_text(messages: list["SessionMessage"]) -> str:
+    if not messages:
+        return '  Try "compare asyncio vs threading in Python"'
+    rendered_messages = messages
+    blocks: list[str] = []
+    for message in rendered_messages:
+        body = message.body or " "
+        if message.role == "user":
+            blocks.append(f"› {body}")
+            continue
+        if message.role == "assistant":
+            blocks.append(f"  {message.title or 'SeekFlow'}\n  {body}")
+            continue
+        if message.role == "tool":
+            blocks.append(f"  {body}")
+            continue
+        if message.role == "sources":
+            blocks.append(f"  Sources\n  {body}")
+            continue
+        if message.role == "saved":
+            blocks.append(f"  Saved\n  {body}")
+            continue
+        if message.role == "error":
+            blocks.append(f"  Warning\n  {body}")
+            continue
+        title = message.title or message.role.title()
+        blocks.append(f"  {title}\n  {body}")
+    return "\n\n".join(blocks)
+
+
+def build_repl_body_text(config, messages: list["SessionMessage"], width: int = 108) -> str:
+    return f"{build_header_text(config, width=width)}\n\n{build_transcript_text(messages)}"
 
 
 def _render_left_header(config) -> RenderableType:
@@ -130,7 +223,6 @@ def build_app_shell(config, messages: list[SessionMessage]) -> RenderableType:
 
 
 def render_app_shell(config, messages: list[SessionMessage]) -> None:
-    console.clear()
     console.print(build_app_shell(config, messages))
 
 

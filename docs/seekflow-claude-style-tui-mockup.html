@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SeekFlow Claude-Style TUI Mockup</title>
+  <style>
+    :root {
+      --bg: #f5f1e8;
+      --paper: #fbf8f2;
+      --panel: #fffdf9;
+      --ink: #1f1c18;
+      --muted: #73695d;
+      --line: #d9cebf;
+      --soft-line: #e8dfd2;
+      --accent: #ca6b2c;
+      --accent-soft: rgba(202, 107, 44, 0.14);
+      --warn: #9f6a00;
+      --shadow: 0 18px 50px rgba(52, 39, 24, 0.08);
+      --radius: 22px;
+      --mono: "SFMono-Regular", "JetBrains Mono", "Menlo", monospace;
+      --serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: var(--serif);
+      background:
+        radial-gradient(circle at top left, rgba(202, 107, 44, 0.14), transparent 26%),
+        radial-gradient(circle at top right, rgba(70, 110, 92, 0.12), transparent 32%),
+        linear-gradient(180deg, #f7f4ec 0%, #eee6da 100%);
+    }
+
+    .page {
+      width: min(1380px, calc(100vw - 40px));
+      margin: 0 auto;
+      padding: 40px 0 80px;
+    }
+
+    .hero {
+      margin-bottom: 28px;
+    }
+
+    .eyebrow {
+      font: 600 12px/1.2 var(--mono);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #6f665b;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(34px, 5vw, 58px);
+      line-height: 0.98;
+      letter-spacing: -0.04em;
+    }
+
+    .hero p {
+      margin: 0;
+      color: var(--muted);
+      max-width: 860px;
+      font-size: 18px;
+      line-height: 1.5;
+    }
+
+    .layout {
+      display: grid;
+      gap: 24px;
+    }
+
+    .scene {
+      background: rgba(255, 252, 247, 0.76);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(105, 84, 59, 0.14);
+      border-radius: 28px;
+      padding: 18px 18px 22px;
+      box-shadow: var(--shadow);
+    }
+
+    .scene-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 16px;
+      padding: 0 6px 16px;
+    }
+
+    .scene-head h2 {
+      margin: 0;
+      font-size: 24px;
+      letter-spacing: -0.03em;
+    }
+
+    .scene-head p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .terminal {
+      background: #faf7f1;
+      border: 1px solid #d3c8b8;
+      border-radius: 18px;
+      overflow: hidden;
+    }
+
+    .terminal-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-bottom: 1px solid #d9cebe;
+      background: linear-gradient(180deg, #efe8dc 0%, #e3d8c8 100%);
+      color: #6d6459;
+      font: 600 12px/1 var(--mono);
+    }
+
+    .dots {
+      display: inline-flex;
+      gap: 6px;
+      margin-right: 4px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: #cab9a2;
+    }
+
+    .terminal-body {
+      padding: 14px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .welcome {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: linear-gradient(180deg, #fffdf9 0%, #fdf7ed 100%);
+      overflow: hidden;
+    }
+
+    .welcome-top {
+      padding: 14px 18px 0;
+      font: 600 12px/1.2 var(--mono);
+      color: #61584d;
+    }
+
+    .welcome-grid {
+      display: grid;
+      grid-template-columns: 1.05fr 1fr;
+      gap: 0;
+      min-height: 210px;
+      padding: 8px 0 0;
+    }
+
+    .welcome-pane {
+      padding: 12px 22px 20px;
+      position: relative;
+    }
+
+    .welcome-pane + .welcome-pane {
+      border-left: 1px solid var(--soft-line);
+    }
+
+    .welcome-center {
+      min-height: 150px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: #2d241d;
+    }
+
+    .welcome-title {
+      font-size: 30px;
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+      margin-bottom: 16px;
+    }
+
+    .glyph {
+      font: 700 28px/1 var(--mono);
+      letter-spacing: 0.02em;
+      margin-bottom: 18px;
+      color: #2c2721;
+    }
+
+    .welcome-meta {
+      font: 500 13px/1.5 var(--mono);
+      color: #5c5348;
+    }
+
+    .panel-label {
+      font: 600 12px/1.2 var(--mono);
+      color: #6e6357;
+      margin-bottom: 12px;
+    }
+
+    .tip {
+      font-size: 15px;
+      line-height: 1.55;
+      color: #342d26;
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--soft-line);
+      margin: 18px 0;
+    }
+
+    .transcript {
+      display: grid;
+      gap: 14px;
+      padding: 2px 2px 0;
+    }
+
+    .muted-line {
+      color: #807365;
+      font-size: 15px;
+      line-height: 1.5;
+      padding-left: 10px;
+    }
+
+    .prompt {
+      display: grid;
+      gap: 4px;
+      font-family: var(--mono);
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    .prompt-user {
+      color: #231f1a;
+      font-weight: 600;
+    }
+
+    .prompt-meta {
+      color: #7a6f62;
+      padding-left: 28px;
+      font-size: 14px;
+    }
+
+    .prompt-assistant {
+      padding-left: 28px;
+      color: #2a241d;
+    }
+
+    .status {
+      margin-left: 28px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: #7b451b;
+      font: 600 12px/1 var(--mono);
+      width: fit-content;
+    }
+
+    .tipline {
+      margin-left: 28px;
+      color: #876d45;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .composer {
+      border-top: 1px solid var(--soft-line);
+      padding: 14px 2px 2px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .composer-input {
+      font: 500 20px/1.4 var(--mono);
+      color: #221d17;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 32px;
+    }
+
+    .caret {
+      font-weight: 700;
+      color: #1f1b16;
+    }
+
+    .composer-placeholder {
+      color: #84786d;
+    }
+
+    .composer-help {
+      padding-left: 26px;
+      color: #8a7d71;
+      font: 500 13px/1.4 var(--mono);
+    }
+
+    .conversation-spacer {
+      min-height: 120px;
+    }
+
+    .home-spacer {
+      min-height: 70px;
+    }
+
+    code {
+      font-family: var(--mono);
+      font-size: 0.95em;
+      background: rgba(122, 92, 58, 0.08);
+      padding: 1px 5px;
+      border-radius: 6px;
+    }
+
+    @media (max-width: 980px) {
+      .page {
+        width: min(100vw - 24px, 1380px);
+        padding-top: 24px;
+      }
+
+      .welcome-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .welcome-pane + .welcome-pane {
+        border-left: 0;
+        border-top: 1px solid var(--soft-line);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div class="eyebrow">SeekFlow Design Preview</div>
+      <h1>Claude-Style TUI Direction for SeekFlow</h1>
+      <p>This HTML mockup shows the intended visual structure before the real terminal UI is rebuilt: a low-height welcome card, a lightweight transcript instead of boxed messages, and a composer that behaves like a terminal prompt rather than a form field.</p>
+    </section>
+
+    <section class="layout">
+      <article class="scene">
+        <div class="scene-head">
+          <h2>Home State</h2>
+          <p>Low-height welcome card, fast path into the first prompt.</p>
+        </div>
+        <div class="terminal">
+          <div class="terminal-bar">
+            <span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>
+            seekflow session
+          </div>
+          <div class="terminal-body">
+            <section class="welcome">
+              <div class="welcome-top">SeekFlow v0.1.0</div>
+              <div class="welcome-grid">
+                <div class="welcome-pane">
+                  <div class="welcome-center">
+                    <div>
+                      <div class="welcome-title">Welcome back!</div>
+                      <div class="glyph">▐▛ seekflow ▜▌</div>
+                      <div class="welcome-meta">deepseek-v4-pro · duckduckgo search<br>~/.seekflow/knowledge</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="welcome-pane">
+                  <div class="panel-label">Tips for getting started</div>
+                  <div class="tip">Run <code>/help</code> to inspect commands and shortcuts before your first search.</div>
+                  <div class="divider"></div>
+                  <div class="panel-label">Recent activity</div>
+                  <div class="tip">1 saved entry · latest: <code>ni-hao</code></div>
+                </div>
+              </div>
+            </section>
+
+            <section class="transcript">
+              <div class="muted-line">Try "compare asyncio vs threading in Python"</div>
+              <div class="home-spacer"></div>
+            </section>
+
+            <section class="composer">
+              <div class="composer-input">
+                <span class="caret">›</span>
+                <span class="composer-placeholder">Ask SeekFlow to research a topic...</span>
+              </div>
+              <div class="composer-help">Enter to send · /help for commands</div>
+            </section>
+          </div>
+        </div>
+      </article>
+
+      <article class="scene">
+        <div class="scene-head">
+          <h2>Conversation State</h2>
+          <p>Transcript-first layout, no heavy message boxes.</p>
+        </div>
+        <div class="terminal">
+          <div class="terminal-bar">
+            <span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>
+            seekflow session
+          </div>
+          <div class="terminal-body">
+            <section class="welcome">
+              <div class="welcome-top">SeekFlow v0.1.0</div>
+              <div class="welcome-grid">
+                <div class="welcome-pane">
+                  <div class="welcome-center">
+                    <div>
+                      <div class="welcome-title">Welcome back!</div>
+                      <div class="glyph">▐▛ seekflow ▜▌</div>
+                      <div class="welcome-meta">deepseek-v4-pro · duckduckgo search<br>~/.seekflow/knowledge</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="welcome-pane">
+                  <div class="panel-label">Tips for getting started</div>
+                  <div class="tip">Run <code>/help</code> to inspect commands and shortcuts before your first search.</div>
+                  <div class="divider"></div>
+                  <div class="panel-label">Recent activity</div>
+                  <div class="tip">1 saved entry · latest: <code>ni-hao</code></div>
+                </div>
+              </div>
+            </section>
+
+            <section class="transcript">
+              <div class="prompt">
+                <div class="prompt-user">› 你好</div>
+                <div class="prompt-meta">Routing to chat</div>
+                <div class="prompt-assistant">SeekFlow</div>
+                <div class="prompt-assistant">你好，我可以帮你检索资料、整理答案，或者把结果保存到本地知识库。</div>
+              </div>
+
+              <div class="prompt">
+                <div class="prompt-user">› Python asyncio 和 threading 的区别</div>
+                <div class="prompt-meta">Routing to web search</div>
+                <div class="prompt-meta">Searching with duckduckgo</div>
+                <div class="prompt-assistant">SeekFlow</div>
+                <div class="prompt-assistant"><code>asyncio</code> 适合高并发 I/O 协作式任务，<code>threading</code> 更适合需要并行等待或兼容阻塞接口的场景。</div>
+                <div class="prompt-meta">Sources</div>
+                <div class="prompt-meta">[1] Python docs - asyncio</div>
+                <div class="prompt-meta">[2] Python docs - threading</div>
+              </div>
+            </section>
+
+            <section class="composer">
+              <div class="composer-input">
+                <span class="caret">›</span>
+                <span class="composer-placeholder">Ask a follow-up...</span>
+              </div>
+              <div class="composer-help">Enter to send · /help for commands</div>
+            </section>
+          </div>
+        </div>
+      </article>
+
+      <article class="scene">
+        <div class="scene-head">
+          <h2>Streaming State</h2>
+          <p>Subtle status lines instead of bordered loading panels.</p>
+        </div>
+        <div class="terminal">
+          <div class="terminal-bar">
+            <span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>
+            seekflow session
+          </div>
+          <div class="terminal-body">
+            <section class="welcome">
+              <div class="welcome-top">SeekFlow v0.1.0</div>
+              <div class="welcome-grid">
+                <div class="welcome-pane">
+                  <div class="welcome-center">
+                    <div>
+                      <div class="welcome-title">Welcome back!</div>
+                      <div class="glyph">▐▛ seekflow ▜▌</div>
+                      <div class="welcome-meta">deepseek-v4-pro · duckduckgo search<br>~/.seekflow/knowledge</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="welcome-pane">
+                  <div class="panel-label">Tips for getting started</div>
+                  <div class="tip">Run <code>/help</code> to inspect commands and shortcuts before your first search.</div>
+                  <div class="divider"></div>
+                  <div class="panel-label">Recent activity</div>
+                  <div class="tip">1 saved entry · latest: <code>ni-hao</code></div>
+                </div>
+              </div>
+            </section>
+
+            <section class="transcript">
+              <div class="prompt">
+                <div class="prompt-user">› 最新的 Python 3.13 有哪些变化</div>
+                <div class="prompt-meta">Routing to web search</div>
+                <div class="prompt-meta">Searching with duckduckgo</div>
+                <div class="status">· Brewing…</div>
+                <div class="tipline">Tip: <code>/save</code> stores the latest assistant reply in your local knowledge base.</div>
+                <div class="prompt-assistant">SeekFlow</div>
+                <div class="prompt-assistant">Python 3.13 在解释器性能、错误提示和标准库上都有更新，其中比较值得关注的是...</div>
+              </div>
+              <div class="conversation-spacer"></div>
+            </section>
+
+            <section class="composer">
+              <div class="composer-input">
+                <span class="caret">›</span>
+                <span class="composer-placeholder">Ask a follow-up...</span>
+              </div>
+              <div class="composer-help">Enter to send · /help for commands</div>
+            </section>
+          </div>
+        </div>
+      </article>
+    </section>
+  </main>
+</body>
+</html>

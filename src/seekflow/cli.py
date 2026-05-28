@@ -11,11 +11,10 @@ from seekflow.output.formatter import (
     build_error_message,
     build_saved_message,
     build_sources_message,
-    render_app_shell,
 )
 from seekflow.pipeline import SearchPipeline
 from seekflow.repl.commands import handle_command
-from seekflow.repl.session import build_session, repl_loop
+from seekflow.repl.session import SeekFlowTUI, append_stream_chunk
 from seekflow.routing.router import route_user_input
 
 app = typer.Typer(help="Search, synthesize, and save answers to a local knowledge base.")
@@ -43,13 +42,18 @@ def init() -> None:
 
 async def run_repl(config) -> None:
     pipeline = SearchPipeline()
-    session = build_session(config.knowledge_base.kb_dir.parent / "history")
     messages: list[SessionMessage] = []
     conversation_history: list[ConversationTurn] = []
     latest_chat: tuple[str, str] | None = None
+    tui: SeekFlowTUI | None = None
 
     def redraw() -> None:
-        render_app_shell(config, messages)
+        if tui is not None:
+            tui.refresh()
+
+    def schedule_redraw() -> None:
+        if tui is not None:
+            tui.schedule_refresh()
 
     async def emit(text: str) -> None:
         messages.append(SessionMessage(role="system", title="System", body=text))
@@ -95,11 +99,8 @@ async def run_repl(config) -> None:
 
         def on_chunk(chunk: str) -> None:
             nonlocal assistant_message
-            if assistant_message is None:
-                assistant_message = SessionMessage(role="assistant", title="SeekFlow", body="")
-                messages.append(assistant_message)
-            assistant_message.body += chunk
-            redraw()
+            assistant_message = append_stream_chunk(messages, chunk)
+            schedule_redraw()
 
         if decision.mode == "chat":
             try:
@@ -143,5 +144,12 @@ async def run_repl(config) -> None:
         latest_chat = None
         redraw()
 
+    tui = SeekFlowTUI(
+        config,
+        config.knowledge_base.kb_dir.parent / "history",
+        messages,
+        command_handler,
+        search_handler,
+    )
     redraw()
-    await repl_loop(config, command_handler, search_handler, session)
+    await tui.run()
