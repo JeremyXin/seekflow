@@ -130,12 +130,12 @@ class SeekFlowTUI:
     def _build_style(self) -> Style:
         return Style.from_dict(
             {
-                "header": "#ddd8cf",
-                "transcript": "#f2ede3",
-                "hint": "#8d8377",
-                "prompt": "bold #f2ede3",
-                "input": "#f2ede3",
-                "separator": "#6f665d",
+                "header": "bg:#111418 #d8dde6",
+                "transcript": "bg:#111418 #cfd6df",
+                "hint": "bg:#111418 #7f8a98",
+                "prompt": "bg:#111418 bold #f5f7fb",
+                "input": "bg:#111418 #eef2f7",
+                "separator": "bg:#111418 #2a313a",
             }
         )
 
