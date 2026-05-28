@@ -2,8 +2,10 @@ import asyncio
 
 import typer
 
+from seekflow.chat.chat_engine import stream_chat_reply
 from seekflow import __version__
 from seekflow.config import ensure_config_exists, load_config
+from seekflow.models import ConversationTurn
 from seekflow.output.formatter import (
     SessionMessage,
     build_error_message,
@@ -14,6 +16,7 @@ from seekflow.output.formatter import (
 from seekflow.pipeline import SearchPipeline
 from seekflow.repl.commands import handle_command
 from seekflow.repl.session import build_session, repl_loop
+from seekflow.routing.router import route_user_input
 
 app = typer.Typer(help="Search, synthesize, and save answers to a local knowledge base.")
 
@@ -42,6 +45,8 @@ async def run_repl(config) -> None:
     pipeline = SearchPipeline()
     session = build_session(config.knowledge_base.kb_dir.parent / "history")
     messages: list[SessionMessage] = []
+    conversation_history: list[ConversationTurn] = []
+    latest_chat: tuple[str, str] | None = None
 
     def redraw() -> None:
         render_app_shell(config, messages)
@@ -51,11 +56,13 @@ async def run_repl(config) -> None:
         redraw()
 
     async def command_handler(text: str) -> None:
+        nonlocal latest_chat
         messages.append(SessionMessage(role="user", title="You", body=text))
         redraw()
-        await handle_command(text, config, emit)
+        await handle_command(text, config, emit, latest_chat=latest_chat)
 
     async def search_handler(text: str) -> None:
+        nonlocal latest_chat
         messages.append(SessionMessage(role="user", title="You", body=text))
         redraw()
 
@@ -69,7 +76,22 @@ async def run_repl(config) -> None:
             redraw()
             return
 
+        try:
+            decision = await route_user_input(text, config)
+        except Exception as exc:
+            messages.append(build_error_message(f"Routing failed: {exc}"))
+            redraw()
+            return
+
         assistant_message: SessionMessage | None = None
+        messages.append(
+            SessionMessage(
+                role="system",
+                title="Router",
+                body=f"Mode: {decision.mode}\nReason: {decision.reason}",
+            )
+        )
+        redraw()
 
         def on_chunk(chunk: str) -> None:
             nonlocal assistant_message
@@ -78,6 +100,33 @@ async def run_repl(config) -> None:
                 messages.append(assistant_message)
             assistant_message.body += chunk
             redraw()
+
+        if decision.mode == "chat":
+            try:
+                async for chunk in stream_chat_reply(text, conversation_history, config):
+                    on_chunk(chunk)
+            except Exception as exc:
+                messages.append(build_error_message(str(exc)))
+                redraw()
+                return
+            if assistant_message is None:
+                messages.append(build_error_message("Chat mode returned an empty response."))
+                redraw()
+                return
+            conversation_history.append(ConversationTurn(role="user", content=text))
+            conversation_history.append(ConversationTurn(role="assistant", content=assistant_message.body))
+            latest_chat = (text, assistant_message.body)
+            redraw()
+            return
+
+        messages.append(
+            SessionMessage(
+                role="tool",
+                title="Web Search",
+                body=f"Reason: {decision.reason}\nProvider: {config.app.default_provider}",
+            )
+        )
+        redraw()
 
         try:
             entry = await pipeline.run(text, config, on_chunk=on_chunk, on_sources=None)
@@ -91,6 +140,7 @@ async def run_repl(config) -> None:
         messages.append(build_sources_message(entry.sources))
         if entry.file_path:
             messages.append(build_saved_message(entry.file_path))
+        latest_chat = None
         redraw()
 
     redraw()

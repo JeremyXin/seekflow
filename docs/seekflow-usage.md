@@ -47,7 +47,7 @@ SEEKFLOW_CONFIG_PATH=/your/path/config.toml seekflow init
 
 ## 4. 配置 LLM
 
-SeekFlow 的完整搜索回答流程依赖 LLM API Key。当前最简单的配置方式是环境变量：
+SeekFlow 的 chat 与 search 流程都依赖 LLM API Key。当前最简单的配置方式是环境变量：
 
 ```bash
 export SEEKFLOW_LLM_API_KEY="your-api-key"
@@ -119,7 +119,33 @@ seekflow --version
 
 ## 7. 基本搜索流程
 
-进入 REPL 后，直接输入自然语言问题即可：
+进入 REPL 后，输入行为现在分成三类：
+
+- `/...` 开头：按命令处理
+- 普通问题：先由模型判定是 `chat` 还是 `search`
+- 如果模型判断需要外部或当前信息：SeekFlow 会触发 web search
+
+## 7. 基本交互流程
+
+### 7.1 Chat 模式
+
+对于一般解释、推理、润色、问答类请求，SeekFlow 默认会先走 chat：
+
+```text
+seekflow> Explain Python descriptors
+```
+
+这类回答：
+
+- 不触发 provider 搜索
+- 不显示 sources
+- 不自动保存到知识库
+
+### 7.2 Search 模式
+
+当模型判断当前问题需要网页搜索时，SeekFlow 会先显示一条路由或工具事件，再走搜索流程。
+
+例如：
 
 ```text
 seekflow> What is Python GIL?
@@ -127,11 +153,12 @@ seekflow> What is Python GIL?
 
 执行过程大致是：
 
-1. 先显示搜索来源
+1. 先显示路由/搜索触发事件
 2. 再流式输出回答
-3. 最后提示保存路径
+3. 回答后显示 sources
+4. 最后提示保存路径
 
-如果成功，结果会被保存到本地知识库目录。
+如果成功，search 结果会自动保存到本地知识库目录。
 
 ## 8. Slash Commands
 
@@ -195,7 +222,21 @@ seekflow> What is Python GIL?
 
 当前会显示基础运行配置，例如默认 provider 和知识库路径。
 
-### 8.7 查看知识库列表
+### 8.7 保存最近一轮 chat 对话
+
+```text
+/save
+```
+
+这个命令用于把最近一轮纯 chat 问答保存到本地知识库。
+
+说明：
+
+- chat 默认不自动保存
+- 只有在最近一轮确实存在 chat 问答时，`/save` 才会成功
+- search 结果仍然保持自动保存
+
+### 8.8 查看知识库列表
 
 ```text
 /kb list
@@ -203,7 +244,7 @@ seekflow> What is Python GIL?
 
 列出当前知识库中的 Markdown 条目。
 
-### 8.8 搜索知识库
+### 8.9 搜索知识库
 
 ```text
 /kb search python
@@ -211,7 +252,7 @@ seekflow> What is Python GIL?
 
 在已保存的 Markdown 内容中做简单文本匹配。
 
-### 8.9 查看单条知识条目
+### 8.10 查看单条知识条目
 
 ```text
 /kb show /absolute/path/to/file.md
@@ -219,7 +260,7 @@ seekflow> What is Python GIL?
 
 输出指定 Markdown 文件的内容。
 
-### 8.10 删除知识条目
+### 8.11 删除知识条目
 
 ```text
 /kb delete /absolute/path/to/file.md
@@ -345,5 +386,6 @@ obsidian_subfolder = "SeekFlow"
 - 没有自动 provider failover
 - 没有多 provider 聚合搜索
 - 没有完整的富文本交互浏览
+- chat/search 路由完全依赖同一个模型配置，没有单独 router model
 
 但对于“终端里提问并把结果保存成 Markdown”这一目标，当前版本已经具备完整基本能力。

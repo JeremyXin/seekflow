@@ -19,7 +19,7 @@ SeekFlow 是一个基于 Python 的命令行搜索助手。它的目标不是做
 
 ## 2. 总体架构
 
-SeekFlow 当前采用“线性主流程 + 模块化边界”的实现方式。
+SeekFlow 当前采用“路由层 + 执行层 + 持久化层”的实现方式。
 
 ```text
 User Input
@@ -31,9 +31,13 @@ Typer CLI / REPL
    |       |
    |       +--> Provider Commands
    |       +--> KB Commands
-   |       +--> Config Show
+   |       +--> Config Show / Save Chat
    |
-   +--> Search Pipeline
+   +--> LLM Router
+           |
+           +--> Chat Engine
+           |
+           +--> Search Pipeline
            |
            +--> Provider Registry -> Active Provider
            +--> Content Extraction
@@ -114,16 +118,16 @@ REPL 实现在 [src/seekflow/repl/session.py](/Users/songjiayin/Leibaoxin/plugin
 
 ### 5.1 输入分发规则
 
-输入处理规则非常简单：
+输入处理规则分两层：
 
 - 以 `/` 开头：按 slash command 处理
-- 否则：按搜索请求处理
+- 否则：先交给 LLM router 判断是 `chat` 还是 `search`
 
-这个规则故意不依赖 LLM 做意图识别，原因是：
+这样设计的目的是：
 
-- 成本更低
-- 行为更稳定
-- 命令边界更清晰
+- slash command 保持显式语法，不依赖模型猜测
+- 普通自然语言输入可以优先按聊天理解
+- 只有确实需要外部或最新信息时才触发搜索工具链
 
 ### 5.2 当前命令集合
 
@@ -138,6 +142,7 @@ REPL 实现在 [src/seekflow/repl/session.py](/Users/songjiayin/Leibaoxin/plugin
 - `/kb show <path>`
 - `/kb delete <path>`
 - `/config show`
+- `/save`
 - `/exit`
 - `/quit`
 
@@ -196,7 +201,33 @@ Provider 体系由以下文件组成：
 - Brave 和 SerpAPI 依赖 API Key
 - Playwright 依赖本地浏览器环境
 
-## 7. 搜索主流程
+## 7. 路由层
+
+当前输入路由规则是：
+
+- `/` 开头：直接进入 `command`
+- 非 `/` 输入：先进入 LLM router
+- router 只输出两种结果：
+  - `chat`
+  - `search`
+
+这样 SeekFlow 的行为更接近 agent 的 tool-call 风格，但仍保留程序端的明确控制。
+
+## 8. Chat 主流程
+
+纯 chat 模式使用当前配置中的同一个模型，不触发 provider 搜索。
+
+执行顺序：
+
+1. 读取当前会话历史
+2. 构造 chat prompt
+3. 流式输出回答
+4. 将本轮 user / assistant 内容保存在内存会话历史中
+5. 默认不保存到 KB
+
+如果用户认为这轮 chat 有价值，可以后续使用 `/save` 手动落盘。
+
+## 9. 搜索主流程
 
 主流程实现在 [src/seekflow/pipeline.py](/Users/songjiayin/Leibaoxin/plugin/llm_based_search_engine_cli/src/seekflow/pipeline.py:1)。
 
@@ -214,7 +245,7 @@ Provider 体系由以下文件组成：
 10. 调用 `save_entry()` 落盘
 11. 返回完整 `KBEntry`
 
-### 7.1 为什么用 pipeline
+### 9.1 为什么用 pipeline
 
 这样做的主要原因不是“结构好看”，而是为了降低耦合：
 
@@ -223,7 +254,7 @@ Provider 体系由以下文件组成：
 - LLM 不需要知道文件系统
 - KB 模块不需要知道来源是谁
 
-## 8. 网页正文提取
+## 10. 网页正文提取
 
 正文提取位于 [src/seekflow/extraction/extractor.py](/Users/songjiayin/Leibaoxin/plugin/llm_based_search_engine_cli/src/seekflow/extraction/extractor.py:1)。
 
@@ -240,7 +271,7 @@ Provider 体系由以下文件组成：
 - 有正文时优先用正文
 - 正文提取失败时仍可以退回 snippet
 
-## 9. LLM 合成层
+## 11. LLM 合成层
 
 LLM 相关逻辑位于：
 
@@ -270,7 +301,7 @@ LLM 相关逻辑位于：
 - 分类字段随模型风格漂移
 - 同类问题被写入多个不同目录
 
-## 10. 知识库落盘
+## 12. 知识库落盘
 
 知识库写入实现在 [src/seekflow/knowledge/writer.py](/Users/songjiayin/Leibaoxin/plugin/llm_based_search_engine_cli/src/seekflow/knowledge/writer.py:1)。
 
@@ -313,7 +344,7 @@ frontmatter 当前包含：
 
 用于兼容 Obsidian 的属性系统。
 
-## 11. 错误处理策略
+## 13. 错误处理策略
 
 当前主要错误类型定义在 [src/seekflow/errors.py](/Users/songjiayin/Leibaoxin/plugin/llm_based_search_engine_cli/src/seekflow/errors.py:1)。
 
@@ -325,7 +356,7 @@ frontmatter 当前包含：
 
 CLI 层会捕获异常并通过 formatter 进行错误展示，而不是直接把 traceback 暴露给终端用户。
 
-## 12. 输出层
+## 14. 输出层
 
 终端展示位于 [src/seekflow/output/formatter.py](/Users/songjiayin/Leibaoxin/plugin/llm_based_search_engine_cli/src/seekflow/output/formatter.py:1)。
 
@@ -337,7 +368,7 @@ CLI 层会捕获异常并通过 formatter 进行错误展示，而不是直接�
 
 这里刻意不放业务逻辑，只做终端显示。
 
-## 13. 测试策略
+## 15. 测试策略
 
 测试目录在 `tests/`。
 
@@ -353,7 +384,7 @@ CLI 层会捕获异常并通过 formatter 进行错误展示，而不是直接�
 
 整体策略是“小模块可独测，主流程可拼装”。
 
-## 14. 当前实现边界
+## 16. 当前实现边界
 
 当前第一版已经可用，但仍然是 MVP：
 
@@ -366,7 +397,7 @@ CLI 层会捕获异常并通过 formatter 进行错误展示，而不是直接�
 
 这意味着当前版本的重点是先把“搜索 -> 回答 -> 保存”主链路跑通，而不是做复杂的平台化能力。
 
-## 15. 后续可扩展方向
+## 17. 后续可扩展方向
 
 比较自然的下一步包括：
 

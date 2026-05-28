@@ -2,6 +2,7 @@ from pathlib import Path
 
 from seekflow.config import save_config
 from seekflow.knowledge.reader import delete_entry, list_entries, read_entry, search_entries
+from seekflow.knowledge.writer import build_chat_kb_entry, save_entry
 
 
 def parse_command(text: str) -> tuple[str, list[str]]:
@@ -9,13 +10,13 @@ def parse_command(text: str) -> tuple[str, list[str]]:
     return parts[0], parts[1:]
 
 
-async def handle_command(text: str, config, emit) -> None:
+async def handle_command(text: str, config, emit, latest_chat=None) -> None:
     command, args = parse_command(text)
 
     if command == "help":
         await emit(
             "/help /provider list /provider switch <name> /provider status /kb list /kb search <query> "
-            "/kb show <path> /kb delete <path> /config show /exit"
+            "/kb show <path> /kb delete <path> /config show /save /exit"
         )
         return
 
@@ -61,6 +62,20 @@ async def handle_command(text: str, config, emit) -> None:
     if command == "kb" and args[:1] == ["delete"] and len(args) == 2:
         deleted = delete_entry(Path(args[1]))
         await emit("Deleted" if deleted else "Not found")
+        return
+
+    if command == "save":
+        if latest_chat is None:
+            await emit("No chat exchange available to save.")
+            return
+        user_text, assistant_text = latest_chat
+        entry = build_chat_kb_entry(user_text, assistant_text, config)
+        path = await save_entry(
+            entry,
+            config.knowledge_base.kb_dir,
+            obsidian_mode=config.knowledge_base.obsidian_mode,
+        )
+        await emit(f"Saved chat to {path}")
         return
 
     await emit(f"Unknown command: {text}")

@@ -1,9 +1,10 @@
+from datetime import UTC, datetime
 from pathlib import Path
 
 import yaml
 from slugify import slugify
 
-from seekflow.models import KBEntry
+from seekflow.models import AppConfig, KBEntry
 
 
 def slugify_query(query: str) -> str:
@@ -36,6 +37,22 @@ def build_entry_path(kb_dir: Path, entry: KBEntry) -> Path:
     slug = slugify_query(entry.query)
     folder = kb_dir / entry.date.strftime("%Y-%m") / entry.category
     return folder / f"{slug}.md"
+
+
+def build_chat_kb_entry(user_text: str, assistant_text: str, config: AppConfig) -> KBEntry:
+    summary = assistant_text.strip().replace("\n", " ")[:140]
+    return KBEntry(
+        title=user_text,
+        date=datetime.now(UTC),
+        query=user_text,
+        answer=assistant_text,
+        tags=["chat"],
+        category="general",
+        provider="chat",
+        model=config.llm.model,
+        summary=summary or user_text,
+        sources=[],
+    )
 
 
 async def save_entry(entry: KBEntry, kb_dir: Path, obsidian_mode: bool = False) -> Path:

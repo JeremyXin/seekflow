@@ -5,6 +5,7 @@ from unittest.mock import patch
 import pytest
 
 from seekflow.config import get_default_config
+from seekflow.models import ConversationTurn
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -42,3 +43,11 @@ def mocker():
 def app_config(tmp_path, monkeypatch):
     monkeypatch.setenv("SEEKFLOW_CONFIG_PATH", str(tmp_path / ".seekflow" / "config.toml"))
     return get_default_config(home_dir=tmp_path)
+
+
+@pytest.fixture
+def conversation_history():
+    return [
+        ConversationTurn(role="user", content="hello"),
+        ConversationTurn(role="assistant", content="hi"),
+    ]

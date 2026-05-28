@@ -62,6 +62,7 @@ def _render_message(message: SessionMessage) -> Panel:
     style_map = {
         "user": ("You", "bright_blue"),
         "assistant": ("SeekFlow", "white"),
+        "tool": ("Web Search", "cyan"),
         "error": ("Error", "red"),
         "system": ("System", "bright_black"),
         "sources": ("Sources", "yellow"),
