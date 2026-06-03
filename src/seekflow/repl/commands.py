@@ -10,14 +10,28 @@ def parse_command(text: str) -> tuple[str, list[str]]:
     return parts[0], parts[1:]
 
 
-async def handle_command(text: str, config, emit, latest_chat=None) -> None:
+async def handle_command(text: str, config, emit, latest_chat=None, get_mode=None, set_mode=None) -> None:
     command, args = parse_command(text)
 
     if command == "help":
         await emit(
             "/help /provider list /provider switch <name> /provider status /kb list /kb search <query> "
-            "/kb show <path> /kb delete <path> /config show /save /exit"
+            "/kb show <path> /kb delete <path> /config show /mode status /mode chat /mode search /save /exit"
         )
+        return
+
+    if command == "mode":
+        if get_mode is None or set_mode is None:
+            await emit("Mode controls are unavailable.")
+            return
+        if args == ["status"]:
+            await emit(f"Current mode: {get_mode()}")
+            return
+        if len(args) == 1 and args[0] in {"chat", "search"}:
+            set_mode(args[0])
+            await emit(f"Switched mode to {args[0]}")
+            return
+        await emit("Usage: /mode status|chat|search")
         return
 
     if command == "config" and args == ["show"]:

@@ -15,7 +15,6 @@ from seekflow.output.formatter import (
 from seekflow.pipeline import SearchPipeline
 from seekflow.repl.commands import handle_command
 from seekflow.repl.session import SeekFlowTUI, append_stream_chunk
-from seekflow.routing.router import route_user_input
 
 app = typer.Typer(help="Search, synthesize, and save answers to a local knowledge base.")
 
@@ -45,6 +44,7 @@ async def run_repl(config) -> None:
     messages: list[SessionMessage] = []
     conversation_history: list[ConversationTurn] = []
     latest_chat: tuple[str, str] | None = None
+    current_mode = "search"
     tui: SeekFlowTUI | None = None
 
     def redraw() -> None:
@@ -59,11 +59,63 @@ async def run_repl(config) -> None:
         messages.append(SessionMessage(role="system", title="System", body=text))
         redraw()
 
+    def get_mode() -> str:
+        return current_mode
+
+    def set_mode(mode: str) -> None:
+        nonlocal current_mode
+        current_mode = mode
+
     async def command_handler(text: str) -> None:
         nonlocal latest_chat
         messages.append(SessionMessage(role="user", title="You", body=text))
         redraw()
-        await handle_command(text, config, emit, latest_chat=latest_chat)
+        await handle_command(
+            text,
+            config,
+            emit,
+            latest_chat=latest_chat,
+            get_mode=get_mode,
+            set_mode=set_mode,
+        )
+
+    async def chat_handler(text: str) -> None:
+        nonlocal latest_chat
+        messages.append(SessionMessage(role="user", title="You", body=text))
+        redraw()
+
+        if not config.llm.api_key:
+            messages.append(
+                build_error_message(
+                    "LLM API key is not configured.",
+                    "Set SEEKFLOW_LLM_API_KEY or edit ~/.seekflow/config.toml before chatting.",
+                )
+            )
+            redraw()
+            return
+
+        assistant_message: SessionMessage | None = None
+
+        def on_chunk(chunk: str) -> None:
+            nonlocal assistant_message
+            assistant_message = append_stream_chunk(messages, chunk)
+            schedule_redraw()
+
+        try:
+            async for chunk in stream_chat_reply(text, conversation_history, config):
+                on_chunk(chunk)
+        except Exception as exc:
+            messages.append(build_error_message(str(exc)))
+            redraw()
+            return
+        if assistant_message is None:
+            messages.append(build_error_message("Chat mode returned an empty response."))
+            redraw()
+            return
+        conversation_history.append(ConversationTurn(role="user", content=text))
+        conversation_history.append(ConversationTurn(role="assistant", content=assistant_message.body))
+        latest_chat = (text, assistant_message.body)
+        redraw()
 
     async def search_handler(text: str) -> None:
         nonlocal latest_chat
@@ -80,51 +132,18 @@ async def run_repl(config) -> None:
             redraw()
             return
 
-        try:
-            decision = await route_user_input(text, config)
-        except Exception as exc:
-            messages.append(build_error_message(f"Routing failed: {exc}"))
-            redraw()
-            return
-
         assistant_message: SessionMessage | None = None
-        messages.append(
-            SessionMessage(
-                role="system",
-                title="Router",
-                body=f"Mode: {decision.mode}\nReason: {decision.reason}",
-            )
-        )
-        redraw()
 
         def on_chunk(chunk: str) -> None:
             nonlocal assistant_message
             assistant_message = append_stream_chunk(messages, chunk)
             schedule_redraw()
 
-        if decision.mode == "chat":
-            try:
-                async for chunk in stream_chat_reply(text, conversation_history, config):
-                    on_chunk(chunk)
-            except Exception as exc:
-                messages.append(build_error_message(str(exc)))
-                redraw()
-                return
-            if assistant_message is None:
-                messages.append(build_error_message("Chat mode returned an empty response."))
-                redraw()
-                return
-            conversation_history.append(ConversationTurn(role="user", content=text))
-            conversation_history.append(ConversationTurn(role="assistant", content=assistant_message.body))
-            latest_chat = (text, assistant_message.body)
-            redraw()
-            return
-
         messages.append(
             SessionMessage(
                 role="tool",
                 title="Web Search",
-                body=f"Reason: {decision.reason}\nProvider: {config.app.default_provider}",
+                body=f"Provider: {config.app.default_provider}",
             )
         )
         redraw()
@@ -141,7 +160,6 @@ async def run_repl(config) -> None:
         messages.append(build_sources_message(entry.sources))
         if entry.file_path:
             messages.append(build_saved_message(entry.file_path))
-        latest_chat = None
         redraw()
 
     tui = SeekFlowTUI(
@@ -149,7 +167,10 @@ async def run_repl(config) -> None:
         config.knowledge_base.kb_dir.parent / "history",
         messages,
         command_handler,
+        chat_handler,
         search_handler,
+        get_mode,
+        set_mode,
     )
     redraw()
     await tui.run()

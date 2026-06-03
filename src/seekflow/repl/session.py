@@ -22,7 +22,9 @@ from seekflow.output.formatter import (
 async def dispatch_input(
     text: str,
     command_handler: Callable[[str], Awaitable[None]],
+    chat_handler: Callable[[str], Awaitable[None]],
     search_handler: Callable[[str], Awaitable[None]],
+    get_mode: Callable[[], str],
 ) -> None:
     stripped = text.strip()
     if not stripped:
@@ -30,17 +32,21 @@ async def dispatch_input(
     if stripped.startswith("/"):
         await command_handler(stripped)
         return
+    if get_mode() == "chat":
+        await chat_handler(stripped)
+        return
     await search_handler(stripped)
 
 
-def build_input_hint_text() -> str:
-    return "  ? for shortcuts"
+def build_input_hint_text(mode: str) -> str:
+    return f"  mode={mode} · Shift-Tab toggle mode · /mode status · /help"
 
 
-def build_repl_view(config, messages: list[SessionMessage], current_input: str) -> dict[str, str]:
+def build_repl_view(config, messages: list[SessionMessage], current_input: str, mode: str) -> dict[str, str]:
     return {
         "body": build_repl_body_text(config, messages),
         "input": current_input,
+        "hint": build_input_hint_text(mode),
     }
 
 
@@ -58,13 +64,19 @@ class SeekFlowTUI:
         history_path: Path,
         messages: list[SessionMessage],
         command_handler: Callable[[str], Awaitable[None]],
+        chat_handler: Callable[[str], Awaitable[None]],
         search_handler: Callable[[str], Awaitable[None]],
+        get_mode: Callable[[], str],
+        set_mode: Callable[[str], None],
     ) -> None:
         history_path.parent.mkdir(parents=True, exist_ok=True)
         self.config = config
         self.messages = messages
         self.command_handler = command_handler
+        self.chat_handler = chat_handler
         self.search_handler = search_handler
+        self.get_mode = get_mode
+        self.set_mode = set_mode
         self._refresh_handle: asyncio.TimerHandle | None = None
         self._pending_header_refresh = False
         self._submit_in_flight = False
@@ -84,11 +96,11 @@ class SeekFlowTUI:
             history=FileHistory(str(history_path)),
             height=1,
             dont_extend_height=True,
-            prompt=[("class:prompt", "❯ ")],
+            prompt=[("class:prompt", self._build_prompt_text())],
             style="class:input",
         )
         self.input_hint_area = TextArea(
-            text=build_input_hint_text(),
+            text=build_input_hint_text(self.get_mode()),
             read_only=True,
             focusable=False,
             height=1,
@@ -125,7 +137,21 @@ class SeekFlowTUI:
         def _submit(event) -> None:
             event.app.create_background_task(self._submit_current_input())
 
+        @bindings.add("s-tab")
+        def _toggle_mode(event) -> None:
+            self._toggle_mode()
+            event.app.invalidate()
+
         return bindings
+
+    def _build_prompt_text(self) -> str:
+        return f"[{self.get_mode()}] ❯ "
+
+    def _toggle_mode(self) -> None:
+        new_mode = "chat" if self.get_mode() == "search" else "search"
+        self.set_mode(new_mode)
+        self.messages.append(SessionMessage(role="system", title="System", body=f"Mode switched to {new_mode}"))
+        self.refresh(refresh_header=False)
 
     def _build_style(self) -> Style:
         return Style.from_dict(
@@ -151,7 +177,13 @@ class SeekFlowTUI:
             return
         self._submit_in_flight = True
         try:
-            await dispatch_input(text, self.command_handler, self.search_handler)
+            await dispatch_input(
+                text,
+                self.command_handler,
+                self.chat_handler,
+                self.search_handler,
+                self.get_mode,
+            )
         except Exception as exc:
             if len(self.messages) == message_count_before_submit:
                 self.input_area.buffer.set_document(
@@ -166,12 +198,15 @@ class SeekFlowTUI:
 
     def refresh(self, refresh_header: bool = True) -> None:
         width = max(76, self.application.output.get_size().columns - 4)
-        view = {
-            "body": build_repl_body_text(self.config, self.messages, width=width),
-            "input": self.input_area.text,
-        }
+        view = build_repl_view(self.config, self.messages, self.input_area.text, self.get_mode())
+        view["body"] = build_repl_body_text(self.config, self.messages, width=width)
         self.body_area.buffer.set_document(
             Document(view["body"], cursor_position=len(view["body"])),
+            bypass_readonly=True,
+        )
+        self.input_area.prompt = [("class:prompt", self._build_prompt_text())]
+        self.input_hint_area.buffer.set_document(
+            Document(view["hint"], cursor_position=len(view["hint"])),
             bypass_readonly=True,
         )
         self.application.invalidate()

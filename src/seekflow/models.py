@@ -64,13 +64,6 @@ class AppConfig:
     knowledge_base: KnowledgeBaseConfig
     providers: dict[str, ProviderConfig]
 
-
-@dataclass(slots=True)
-class RouteDecision:
-    mode: str
-    reason: str
-
-
 @dataclass(slots=True)
 class ConversationTurn:
     role: str
