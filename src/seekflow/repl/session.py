@@ -5,6 +5,7 @@ from collections.abc import Awaitable, Callable
 from pathlib import Path
 
 from prompt_toolkit.application import Application
+from prompt_toolkit.completion import NestedCompleter
 from prompt_toolkit.document import Document
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings
@@ -40,6 +41,21 @@ async def dispatch_input(
 
 def build_input_hint_text(mode: str) -> str:
     return f"  mode={mode} · Shift-Tab toggle mode · /mode status · /help"
+
+
+def build_command_completer() -> NestedCompleter:
+    return NestedCompleter.from_nested_dict(
+        {
+            "/help": None,
+            "/config": {"show": None},
+            "/provider": {"list": None, "status": None, "switch": None},
+            "/kb": {"list": None, "search": None, "show": None, "delete": None},
+            "/mode": {"status": None, "chat": None, "search": None},
+            "/save": None,
+            "/exit": None,
+            "/quit": None,
+        }
+    )
 
 
 def build_repl_view(config, messages: list[SessionMessage], current_input: str, mode: str) -> dict[str, str]:
@@ -94,9 +110,10 @@ class SeekFlowTUI:
             text="",
             multiline=False,
             history=FileHistory(str(history_path)),
+            completer=build_command_completer(),
             height=1,
             dont_extend_height=True,
-            prompt=[("class:prompt", self._build_prompt_text())],
+            prompt=self._prompt_fragments,
             style="class:input",
         )
         self.input_hint_area = TextArea(
@@ -146,6 +163,9 @@ class SeekFlowTUI:
 
     def _build_prompt_text(self) -> str:
         return f"[{self.get_mode()}] ❯ "
+
+    def _prompt_fragments(self) -> list[tuple[str, str]]:
+        return [("class:prompt", self._build_prompt_text())]
 
     def _toggle_mode(self) -> None:
         new_mode = "chat" if self.get_mode() == "search" else "search"
@@ -204,7 +224,6 @@ class SeekFlowTUI:
             Document(view["body"], cursor_position=len(view["body"])),
             bypass_readonly=True,
         )
-        self.input_area.prompt = [("class:prompt", self._build_prompt_text())]
         self.input_hint_area.buffer.set_document(
             Document(view["hint"], cursor_position=len(view["hint"])),
             bypass_readonly=True,

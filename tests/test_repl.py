@@ -1,5 +1,6 @@
 import pytest
 from types import SimpleNamespace
+from prompt_toolkit.document import Document
 
 from seekflow.output.formatter import SessionMessage
 from seekflow.repl.session import SeekFlowTUI, build_input_hint_text, dispatch_input
@@ -163,4 +164,54 @@ def test_shift_tab_toggles_mode_and_updates_prompt(app_config, tmp_path) -> None
     binding.handler(event)
 
     assert mode == "chat"
-    assert "[chat]" in tui.input_area.prompt[0][1]
+    prompt_factory = tui.input_area.control.input_processors[2].text
+    assert "[chat]" in prompt_factory()[0][1]
+
+
+def test_mode_prompt_is_dynamic(app_config, tmp_path) -> None:
+    mode = "search"
+
+    def get_mode() -> str:
+        return mode
+
+    def set_mode(new_mode: str) -> None:
+        nonlocal mode
+        mode = new_mode
+
+    tui = SeekFlowTUI(
+        app_config,
+        tmp_path / "history",
+        [],
+        lambda text: None,
+        lambda text: None,
+        lambda text: None,
+        get_mode,
+        set_mode,
+    )
+
+    prompt_factory = tui.input_area.control.input_processors[2].text
+    assert "[search]" in prompt_factory()[0][1]
+
+    set_mode("chat")
+
+    assert "[chat]" in prompt_factory()[0][1]
+
+
+def test_mode_command_completion_offers_subcommands(app_config, tmp_path) -> None:
+    tui = SeekFlowTUI(
+        app_config,
+        tmp_path / "history",
+        [],
+        lambda text: None,
+        lambda text: None,
+        lambda text: None,
+        lambda: "search",
+        lambda mode: None,
+    )
+
+    completions = [
+        completion.text
+        for completion in tui.input_area.completer.get_completions(Document("/mode ", len("/mode ")), None)
+    ]
+
+    assert completions == ["status", "chat", "search"]
