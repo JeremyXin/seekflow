@@ -60,6 +60,7 @@ async def test_dispatches_chat_query_in_chat_mode() -> None:
 def test_build_input_hint_text_contains_repl_guidance() -> None:
     prompt = build_input_hint_text("search")
     assert "Shift-Tab toggle mode" in prompt
+    assert "PgUp/PgDn scroll transcript" in prompt
     assert "/mode" in prompt
     assert "search" in prompt
 
@@ -215,3 +216,77 @@ def test_mode_command_completion_offers_subcommands(app_config, tmp_path) -> Non
     ]
 
     assert completions == ["status", "chat", "search"]
+
+
+def test_pageup_scrolls_transcript_without_changing_input(app_config, tmp_path) -> None:
+    tui = SeekFlowTUI(
+        app_config,
+        tmp_path / "history",
+        [SessionMessage(role="assistant", title="SeekFlow", body="\n".join(f"line {i}" for i in range(200)))],
+        lambda text: None,
+        lambda text: None,
+        lambda text: None,
+        lambda: "search",
+        lambda mode: None,
+    )
+    tui.input_area.buffer.text = "draft input"
+    tui.body_area.window.vertical_scroll = 20
+
+    binding = next(
+        binding
+        for binding in tui.application.key_bindings.bindings
+        if binding.keys == ("pageup",)
+    )
+    event = SimpleNamespace(app=tui.application)
+
+    binding.handler(event)
+
+    assert tui.body_area.window.vertical_scroll < 20
+    assert tui.input_area.text == "draft input"
+    assert tui._follow_output is False
+
+
+def test_ctrl_up_scrolls_transcript_in_small_steps(app_config, tmp_path) -> None:
+    tui = SeekFlowTUI(
+        app_config,
+        tmp_path / "history",
+        [SessionMessage(role="assistant", title="SeekFlow", body="\n".join(f"line {i}" for i in range(200)))],
+        lambda text: None,
+        lambda text: None,
+        lambda text: None,
+        lambda: "search",
+        lambda mode: None,
+    )
+    tui.body_area.window.vertical_scroll = 20
+
+    binding = next(
+        binding
+        for binding in tui.application.key_bindings.bindings
+        if binding.keys == ("c-up",)
+    )
+    event = SimpleNamespace(app=tui.application)
+
+    binding.handler(event)
+
+    assert tui.body_area.window.vertical_scroll == 17
+    assert tui._follow_output is False
+
+
+def test_refresh_preserves_scroll_position_when_follow_output_disabled(app_config, tmp_path) -> None:
+    tui = SeekFlowTUI(
+        app_config,
+        tmp_path / "history",
+        [SessionMessage(role="assistant", title="SeekFlow", body="\n".join(f"line {i}" for i in range(200)))],
+        lambda text: None,
+        lambda text: None,
+        lambda text: None,
+        lambda: "search",
+        lambda mode: None,
+    )
+    tui.body_area.window.vertical_scroll = 12
+    tui._follow_output = False
+    tui.messages.append(SessionMessage(role="assistant", title="SeekFlow", body="new reply"))
+
+    tui.refresh(refresh_header=False)
+
+    assert tui.body_area.window.vertical_scroll == 12

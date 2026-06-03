@@ -40,7 +40,10 @@ async def dispatch_input(
 
 
 def build_input_hint_text(mode: str) -> str:
-    return f"  mode={mode} · Shift-Tab toggle mode · /mode status · /help"
+    return (
+        f"  mode={mode} · Shift-Tab toggle mode · "
+        f"PgUp/PgDn scroll transcript · End jump bottom · /mode status · /help"
+    )
 
 
 def build_command_completer() -> NestedCompleter:
@@ -96,12 +99,13 @@ class SeekFlowTUI:
         self._refresh_handle: asyncio.TimerHandle | None = None
         self._pending_header_refresh = False
         self._submit_in_flight = False
+        self._follow_output = True
 
         self.body_area = TextArea(
             text="",
             read_only=True,
-            focusable=False,
-            scrollbar=False,
+            focusable=True,
+            scrollbar=True,
             wrap_lines=True,
             dont_extend_height=True,
             style="class:transcript",
@@ -159,6 +163,31 @@ class SeekFlowTUI:
             self._toggle_mode()
             event.app.invalidate()
 
+        @bindings.add("pageup")
+        def _page_up(event) -> None:
+            self._scroll_body(-10)
+            event.app.invalidate()
+
+        @bindings.add("c-up")
+        def _scroll_up(event) -> None:
+            self._scroll_body(-3)
+            event.app.invalidate()
+
+        @bindings.add("pagedown")
+        def _page_down(event) -> None:
+            self._scroll_body(10)
+            event.app.invalidate()
+
+        @bindings.add("c-down")
+        def _scroll_down(event) -> None:
+            self._scroll_body(3)
+            event.app.invalidate()
+
+        @bindings.add("end")
+        def _jump_bottom(event) -> None:
+            self._scroll_to_bottom()
+            event.app.invalidate()
+
         return bindings
 
     def _build_prompt_text(self) -> str:
@@ -184,6 +213,14 @@ class SeekFlowTUI:
                 "separator": "bg:#111418 #2a313a",
             }
         )
+
+    def _scroll_body(self, delta: int) -> None:
+        self.body_area.window.vertical_scroll = max(0, self.body_area.window.vertical_scroll + delta)
+        self._follow_output = False
+
+    def _scroll_to_bottom(self) -> None:
+        self._follow_output = True
+        self.refresh(refresh_header=False)
 
     async def _submit_current_input(self) -> None:
         if self._submit_in_flight:
@@ -220,10 +257,20 @@ class SeekFlowTUI:
         width = max(76, self.application.output.get_size().columns - 4)
         view = build_repl_view(self.config, self.messages, self.input_area.text, self.get_mode())
         view["body"] = build_repl_body_text(self.config, self.messages, width=width)
+        current_cursor_position = min(self.body_area.buffer.cursor_position, len(view["body"]))
+        current_scroll = self.body_area.window.vertical_scroll
+        if self._follow_output:
+            cursor_position = len(view["body"])
+        else:
+            cursor_position = current_cursor_position
         self.body_area.buffer.set_document(
-            Document(view["body"], cursor_position=len(view["body"])),
+            Document(view["body"], cursor_position=cursor_position),
             bypass_readonly=True,
         )
+        if self._follow_output:
+            self.body_area.window.vertical_scroll = max(0, len(view["body"].splitlines()) - 1)
+        else:
+            self.body_area.window.vertical_scroll = current_scroll
         self.input_hint_area.buffer.set_document(
             Document(view["hint"], cursor_position=len(view["hint"])),
             bypass_readonly=True,
