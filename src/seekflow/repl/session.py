@@ -10,6 +10,7 @@ from prompt_toolkit.document import Document
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.layout import HSplit, Layout, Window
+from prompt_toolkit.mouse_events import MouseEvent, MouseEventType
 from prompt_toolkit.styles import Style
 from prompt_toolkit.widgets import TextArea
 
@@ -144,7 +145,9 @@ class SeekFlowTUI:
             key_bindings=self._build_key_bindings(),
             style=self._build_style(),
             full_screen=True,
+            mouse_support=True,
         )
+        self._install_mouse_scroll_routing()
         self.refresh(refresh_header=True)
 
     def _build_key_bindings(self) -> KeyBindings:
@@ -213,6 +216,27 @@ class SeekFlowTUI:
                 "separator": "bg:#111418 #2a313a",
             }
         )
+
+    def _install_mouse_scroll_routing(self) -> None:
+        self.body_area.control.mouse_handler = self._build_scroll_mouse_handler(self.body_area.control.mouse_handler)
+        self.input_area.control.mouse_handler = self._build_scroll_mouse_handler(self.input_area.control.mouse_handler)
+        self.input_hint_area.control.mouse_handler = self._build_scroll_mouse_handler(
+            self.input_hint_area.control.mouse_handler
+        )
+
+    def _build_scroll_mouse_handler(self, delegate):
+        def _mouse_handler(mouse_event: MouseEvent):
+            if mouse_event.event_type == MouseEventType.SCROLL_UP:
+                self._scroll_body(-3)
+                self.application.invalidate()
+                return None
+            if mouse_event.event_type == MouseEventType.SCROLL_DOWN:
+                self._scroll_body(3)
+                self.application.invalidate()
+                return None
+            return delegate(mouse_event)
+
+        return _mouse_handler
 
     def _scroll_body(self, delta: int) -> None:
         self.body_area.window.vertical_scroll = max(0, self.body_area.window.vertical_scroll + delta)

@@ -1,6 +1,8 @@
 import pytest
 from types import SimpleNamespace
+from prompt_toolkit.data_structures import Point
 from prompt_toolkit.document import Document
+from prompt_toolkit.mouse_events import MouseButton, MouseEvent, MouseEventType
 
 from seekflow.output.formatter import SessionMessage
 from seekflow.repl.session import SeekFlowTUI, build_input_hint_text, dispatch_input
@@ -269,6 +271,64 @@ def test_ctrl_up_scrolls_transcript_in_small_steps(app_config, tmp_path) -> None
     binding.handler(event)
 
     assert tui.body_area.window.vertical_scroll == 17
+    assert tui._follow_output is False
+
+
+def test_mouse_support_is_enabled_for_trackpad_scroll(app_config, tmp_path) -> None:
+    tui = SeekFlowTUI(
+        app_config,
+        tmp_path / "history",
+        [],
+        lambda text: None,
+        lambda text: None,
+        lambda text: None,
+        lambda: "search",
+        lambda mode: None,
+    )
+
+    assert tui.application.mouse_support()
+
+
+@pytest.mark.parametrize(
+    ("event_type", "starting_scroll", "expected_scroll"),
+    [
+        (MouseEventType.SCROLL_UP, 20, 17),
+        (MouseEventType.SCROLL_DOWN, 20, 23),
+    ],
+)
+def test_mouse_scroll_on_input_area_scrolls_transcript(
+    app_config,
+    tmp_path,
+    event_type,
+    starting_scroll,
+    expected_scroll,
+) -> None:
+    tui = SeekFlowTUI(
+        app_config,
+        tmp_path / "history",
+        [SessionMessage(role="assistant", title="SeekFlow", body="\n".join(f"line {i}" for i in range(200)))],
+        lambda text: None,
+        lambda text: None,
+        lambda text: None,
+        lambda: "search",
+        lambda mode: None,
+    )
+    tui.input_area.buffer.text = "draft input"
+    tui.body_area.window.vertical_scroll = starting_scroll
+    tui.application.layout.focus(tui.input_area)
+
+    tui.input_area.control.mouse_handler(
+        MouseEvent(
+            position=Point(x=0, y=0),
+            event_type=event_type,
+            button=MouseButton.NONE,
+            modifiers=frozenset(),
+        )
+    )
+
+    assert tui.body_area.window.vertical_scroll == expected_scroll
+    assert tui.input_area.text == "draft input"
+    assert tui.application.layout.current_control == tui.input_area.control
     assert tui._follow_output is False
 
 
