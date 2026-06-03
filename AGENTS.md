@@ -27,7 +27,7 @@ Recent history uses short imperative subjects, usually Conventional Commit style
 
 After each feature implementation or code change, use the `requesting-code-review` skill against the current diff, apply fixes, and repeat the review/fix cycle until the review no longer reports any `Critical` or `Important` issues. Only then stage the files related to that change and prepare a concise commit message.
 
-For every non-merge commit with staged file changes, automatically analyze the staged changes and generate the commit message. Keep the total commit message length within 20 lines. Keep the subject short, and list modified, fixed, or newly added items in the body using `-` bullet points instead of long paragraphs. For merge, revert, or other commits without a normal staged diff summary, use a short manual summary instead.
+For every non-merge commit with staged file changes, automatically analyze the staged changes and generate the commit message. Keep the total commit message length within 10 lines. Keep the subject short, and list modified, fixed, or newly added items in the body using `-` bullet points instead of long paragraphs. For merge, revert, or other commits without a normal staged diff summary, use a short manual summary instead.
 
 PRs should include a concise summary, test evidence (`pytest tests/ -v`), and screenshots or terminal captures for UI/REPL changes.
 
