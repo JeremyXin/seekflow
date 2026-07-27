@@ -57,6 +57,68 @@ def test_build_repl_body_text_includes_header_and_transcript(app_config) -> None
     assert "SeekFlow" in body
 
 
+def test_build_header_text_does_not_include_transcript_messages(app_config) -> None:
+    from seekflow.output.formatter import build_header_text
+
+    header = build_header_text(app_config, width=96)
+
+    assert "SeekFlow" in header
+    assert "Recent activity" in header
+    assert "compare asyncio vs threading" not in header
+
+
+
+
+def test_build_transcript_text_preserves_realistic_search_mode_titles() -> None:
+    from seekflow.output.formatter import build_transcript_text
+
+    transcript = build_transcript_text(
+        [
+            SessionMessage(role="user", title="You", body="compare asyncio vs threading for network clients"),
+            SessionMessage(
+                role="tool",
+                title="Web Search",
+                body="Provider: duckduckgo\nQuery: compare asyncio vs threading for network clients",
+            ),
+            SessionMessage(
+                role="assistant",
+                title="SeekFlow",
+                body="Asyncio is usually better for concurrent I/O; threads help with blocking integrations.",
+            ),
+            SessionMessage(
+                role="sources",
+                title="Sources",
+                body="[1] Python docs\nhttps://docs.python.org/3/library/asyncio.html",
+            ),
+            SessionMessage(role="saved", title="Saved", body="Saved to /tmp/seekflow-asyncio-vs-threading.md"),
+        ]
+    )
+
+    assert "› compare asyncio vs threading for network clients" in transcript
+    assert "Provider: duckduckgo" in transcript
+    assert "SeekFlow" in transcript
+    assert "Sources" in transcript
+    assert "Saved to /tmp/seekflow-asyncio-vs-threading.md" in transcript
+
+def test_build_transcript_text_formats_search_mode_blocks() -> None:
+    from seekflow.output.formatter import build_transcript_text
+
+    transcript = build_transcript_text(
+        [
+            SessionMessage(role="user", title="You", body="python gil"),
+            SessionMessage(role="tool", title="Web Search", body="Provider: duckduckgo"),
+            SessionMessage(role="assistant", title="SeekFlow", body="The GIL serializes bytecode execution."),
+            SessionMessage(role="sources", title="Sources", body="[1] Python docs\nhttps://docs.python.org"),
+            SessionMessage(role="saved", title="Saved", body="Saved to /tmp/example.md"),
+        ]
+    )
+
+    assert "python gil" in transcript
+    assert "Provider: duckduckgo" in transcript
+    assert "Sources" in transcript
+    assert "Saved to /tmp/example.md" in transcript
+
+
 def test_build_transcript_text_keeps_older_messages() -> None:
     from seekflow.output.formatter import build_transcript_text
 
