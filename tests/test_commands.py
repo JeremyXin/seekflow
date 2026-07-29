@@ -116,3 +116,47 @@ async def test_mode_rejects_invalid_target(app_config) -> None:
     await handle_command("/mode invalid", app_config, emit, get_mode=lambda: "search", set_mode=lambda mode: None)
 
     assert output == ["Usage: /mode status|chat|search"]
+
+
+@pytest.mark.asyncio
+async def test_workflow_list_command_reports_available_workflows(app_config) -> None:
+    output: list[str] = []
+
+    async def emit(text: str) -> None:
+        output.append(text)
+
+    async def run_workflow(action: str, name: str, value: str | None = None) -> None:
+        return None
+
+    await handle_command(
+        "/workflow list",
+        app_config,
+        emit,
+        workflow_handler=run_workflow,
+        get_mode=lambda: "search",
+        set_mode=lambda mode: None,
+    )
+
+    assert output == ["Workflows: search_to_article"]
+
+
+@pytest.mark.asyncio
+async def test_workflow_continue_delegates_to_workflow_handler(app_config) -> None:
+    calls: list[tuple[str, str, str | None]] = []
+
+    async def emit(text: str) -> None:
+        return None
+
+    async def run_workflow(action: str, name: str, value: str | None = None) -> None:
+        calls.append((action, name, value))
+
+    await handle_command(
+        "/workflow continue search_to_article",
+        app_config,
+        emit,
+        workflow_handler=run_workflow,
+        get_mode=lambda: "search",
+        set_mode=lambda mode: None,
+    )
+
+    assert calls == [("continue", "search_to_article", None)]

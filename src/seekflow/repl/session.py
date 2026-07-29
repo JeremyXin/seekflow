@@ -58,6 +58,12 @@ def build_command_completer() -> NestedCompleter:
             "/provider": {"list": None, "status": None, "switch": None},
             "/kb": {"list": None, "search": None, "show": None, "delete": None},
             "/mode": {"status": None, "chat": None, "search": None},
+            "/workflow": {
+                "list": None,
+                "status": None,
+                "run": {"search_to_article": None},
+                "continue": {"search_to_article": None},
+            },
             "/save": None,
             "/exit": None,
             "/quit": None,

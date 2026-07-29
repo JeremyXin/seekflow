@@ -10,13 +10,22 @@ def parse_command(text: str) -> tuple[str, list[str]]:
     return parts[0], parts[1:]
 
 
-async def handle_command(text: str, config, emit, latest_chat=None, get_mode=None, set_mode=None) -> None:
+async def handle_command(
+    text: str,
+    config,
+    emit,
+    latest_chat=None,
+    workflow_handler=None,
+    get_mode=None,
+    set_mode=None,
+) -> None:
     command, args = parse_command(text)
 
     if command == "help":
         await emit(
             "/help /provider list /provider switch <name> /provider status /kb list /kb search <query> "
-            "/kb show <path> /kb delete <path> /config show /mode status /mode chat /mode search /save /exit"
+            "/kb show <path> /kb delete <path> /config show /mode status /mode chat /mode search "
+            "/workflow list /workflow status /workflow run <name> <query> /workflow continue <name> /save /exit"
         )
         return
 
@@ -90,6 +99,30 @@ async def handle_command(text: str, config, emit, latest_chat=None, get_mode=Non
             obsidian_mode=config.knowledge_base.obsidian_mode,
         )
         await emit(f"Saved chat to {path}")
+        return
+
+    if command == "workflow":
+        if workflow_handler is None:
+            await emit("Workflow controls are unavailable.")
+            return
+        if args == ["list"]:
+            await emit("Workflows: search_to_article")
+            return
+        if args == ["status"]:
+            await workflow_handler("status", "", None)
+            return
+        if len(args) >= 2 and args[0] == "run":
+            name = args[1]
+            value = " ".join(args[2:]).strip() if len(args) > 2 else None
+            if not value:
+                await emit("Usage: /workflow run <name> <query>")
+                return
+            await workflow_handler("run", name, value)
+            return
+        if len(args) == 2 and args[0] == "continue":
+            await workflow_handler("continue", args[1], None)
+            return
+        await emit("Usage: /workflow list|status|run <name> <query>|continue <name>")
         return
 
     await emit(f"Unknown command: {text}")

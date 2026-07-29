@@ -12,11 +12,19 @@ class Artifact:
 
 
 @dataclass(slots=True)
+class BackendBinding:
+    kind: str
+    target: str
+    options: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
 class StepSpec:
     name: str
     role: str
     consumes: str | None
     produces: str
+    backend: BackendBinding | None = None
 
 
 @dataclass(slots=True)
